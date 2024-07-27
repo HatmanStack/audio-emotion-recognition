@@ -15,10 +15,14 @@
     "preset": "jest-expo"
   },
   "dependencies": {
+    "@expo/config-plugins": "~8.0.0",
+    "@expo/prebuild-config": "~7.0.0",
     "@expo/vector-icons": "^14.0.2",
+    "@react-native-async-storage/async-storage": "1.23.1",
     "@react-navigation/native": "^6.0.2",
     "aws-sdk": "^2.1664.0",
     "dotenv": "^16.4.5",
+    "eas-cli": "^10.2.1",
     "expo": "~51.0.22",
     "expo-av": "^14.0.6",
     "expo-constants": "~16.0.2",
@@ -29,6 +33,7 @@
     "expo-splash-screen": "~0.27.5",
     "expo-status-bar": "~1.12.1",
     "expo-system-ui": "~3.0.7",
+    "expo-updates": "~0.25.21",
     "expo-web-browser": "~13.0.3",
     "react": "18.2.0",
     "react-dom": "18.2.0",

@@ -1,19 +1,23 @@
 import { Image,Button, TextInput, StyleSheet } from 'react-native';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { HelloWave } from '@/components/HelloWave';
 import ParallaxScrollView from '@/components/ParallaxScrollView';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Audio } from 'expo-av';
+import { useEmotion } from '../../context/EmotionContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import AWS from 'aws-sdk';
-import 'dotenv/config';
 
 import * as FileSystem from 'expo-file-system';
 
 export default function HomeScreen() {
   const [response, setResponse] = useState('');
+  const [recordingURI, setRecordingURI] = useState('');
   const [recording, setRecording] = useState(null);
   const [isRecording, setIsRecording] = useState(false);
+  const [isCalling, setIsCalling] = useState(false);
+  const { setEmotionList, emotionList } = useEmotion();
 
   const startRecording = async () => {
     try {
@@ -44,47 +48,92 @@ export default function HomeScreen() {
         console.log('Recording stopped and stored at:', uri);
         setRecording(null);
         setIsRecording(false);
-        const fileContent = await FileSystem.readAsStringAsync(uri, {
+        console.log(uri)
+        const base64_file = await FileSystem.readAsStringAsync(uri, {
           encoding: FileSystem.EncodingType.Base64,
         });
-        const data = {
-          audio: fileContent,
-        };
-        const serializedData = JSON.stringify(data);
+        setRecordingURI(base64_file)
         
-        const awsId = process.env.AWS_ID;
-        const awsSecret = process.env.AWS_SECRET;
-        const awsRegion = process.env.AWS_REGION;
-        console.log(awsId)
-        try {
-          const lambda = new AWS.Lambda({
-            accessKeyId: awsId,
-            secretAccessKey: awsSecret,
-            region: awsRegion,
-          });
-  
-          const params = {
-            FunctionName: 'audio-emotion-recognition',
-            InvocationType: 'RequestResponse',
-            Payload: serializedData,
-          };
-  
-          lambda.invoke(params, (err, data) => {
-            if (err) {
-              console.error(`An error occurred: ${err}`);
-            } else {
-              const responsePayload = JSON.parse(data.Payload);
-              console.log(responsePayload);
-            }
-          });
-        } catch (e) {
-          console.error(`An error occurred: ${e}`);
-        }
       }
     } catch (error) {
       console.error('Failed to stop recording:', error);
     }
   };
+
+  const callLambda = async () => {
+      setIsCalling(true);
+      let audioInclude = "no"
+      if (recordingURI.length > 1){
+        audioInclude = "true"
+      }
+      console.log(response);
+      const data = {
+        audio_included: audioInclude,
+        audio: recordingURI,
+        prompt: response
+      };
+    const serializedData = JSON.stringify(data);
+    const awsId = process.env.EXPO_PUBLIC_AWS_ID;
+    const awsSecret = process.env.EXPO_PUBLIC_AWS_SECRET;
+    const awsRegion = process.env.EXPO_PUBLIC_AWS_REGION;
+    try {
+      const lambda = new AWS.Lambda({
+        accessKeyId: awsId,
+        secretAccessKey: awsSecret,
+        region: awsRegion,
+      });
+      const params = {
+        FunctionName: 'audio-test',
+        InvocationType: 'RequestResponse',
+        Payload: serializedData,
+      };
+      lambda.invoke(params, (err, data) => {
+        if (err) {
+          console.error(`An error occurred: ${err}`);
+        } else {
+          const responsePayload = JSON.parse(data.Payload);
+          const parsedBody = JSON.parse(responsePayload.body);
+          parsedBody[0].timestamp = new Date().toISOString();
+          setEmotionList(prevEmotionList => [JSON.stringify(parsedBody[0]),...prevEmotionList]);
+          console.log(responsePayload);
+        }
+      });
+    } catch (e) {
+      console.error(`An error occurred: ${e}`);
+    }
+    setIsCalling(false);
+  }
+
+  useEffect(() => {
+    const loadEmotionList = async () => {
+      try {
+        const storedEmotionList = await AsyncStorage.getItem('emotionList');
+        if (storedEmotionList) {
+          const parsedEmotionList = JSON.parse(storedEmotionList);
+          const reversedEmotionList = parsedEmotionList.reverse();
+          console.log('Loaded and reversed emotion list:', reversedEmotionList);
+          setEmotionList(reversedEmotionList);
+        }
+      } catch (error) {
+        console.error('Failed to load emotion list:', error);
+      }
+    };
+
+    loadEmotionList();
+  }, []);
+
+  useEffect(() => {
+    const saveEmotionList = async () => {
+      try {
+        console.log('Saving emotion list:', emotionList);
+        await AsyncStorage.setItem('emotionList', JSON.stringify(emotionList));
+      } catch (error) {
+        console.error('Failed to save emotion list:', error);
+      }
+    };
+
+    saveEmotionList();
+  }, [emotionList]);
 
   return (
     <ParallaxScrollView
@@ -111,6 +160,7 @@ export default function HomeScreen() {
           value={response}
           onChangeText={setResponse}
         />
+        <Button title="Submit" onPress={callLambda} disabled={isCalling} />
       </ThemedView>
     </ParallaxScrollView>
   );

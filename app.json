@@ -16,9 +16,19 @@
       "supportsTablet": true
     },
     "android": {
+      "versionCode": 2,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
+      },
+      "package": "com.hatmanstack.audioemotiondetection"
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "6153244b-98d4-4cca-b254-a0b6c8cefe83"
       }
     },
     "web": {
@@ -31,6 +41,32 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "build": {
+      "development": {
+        "distribution": "internal",
+        "android": {
+          "buildType": "apk"
+        },
+        "ios": {
+          "simulator": true
+        }
+      },
+      "production": {
+        "distribution": "store",
+        "android": {
+          "buildType": "app-bundle"
+        },
+        "ios": {
+          "simulator": false
+        }
+      }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/6153244b-98d4-4cca-b254-a0b6c8cefe83"
     }
   }
 }
